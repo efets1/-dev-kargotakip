@@ -13,6 +13,7 @@ cargo_created_total = Counter("cargo_created_total", "Number of cargo shipments 
 cargo_delivered_total = Counter("cargo_delivered_total", "Number of cargo shipments delivered")
 cargo_cancelled_total = Counter("cargo_cancelled_total", "Number of cargo shipments cancelled")
 cargo_status_changed_total = Counter("cargo_status_changed_total", "Number of cargo status changes")
+api_request_total = Counter("api_request_total", "Number of API requests")
 api_request_duration = Histogram("api_request_duration", "API request duration in seconds")
 
 
@@ -25,6 +26,7 @@ def start_request_timer():
 def record_request_duration(response):
     started_at = getattr(g, "request_started_at", None)
     if started_at is not None:
+        api_request_total.inc()
         api_request_duration.observe(time.perf_counter() - started_at)
     return response
 

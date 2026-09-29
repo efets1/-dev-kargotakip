@@ -4,6 +4,18 @@ import os
 from kafka import KafkaConsumer
 
 
+def format_event(event):
+    event_type = event["event"]
+    cargo_id = event["cargo_id"]
+    if event_type == "cargo.delivered":
+        return f"Cargo {cargo_id} delivered."
+    if event_type == "cargo.status_changed":
+        return f"Cargo {cargo_id} status changed to {event['status']}."
+    if event_type == "cargo.created":
+        return f"Cargo {cargo_id} created."
+    return json.dumps(event, ensure_ascii=False)
+
+
 def main():
     consumer = KafkaConsumer(
         "cargo-events",
@@ -15,7 +27,7 @@ def main():
     )
     print("Listening for cargo events...", flush=True)
     for message in consumer:
-        print(json.dumps(message.value, ensure_ascii=False), flush=True)
+        print(format_event(message.value), flush=True)
 
 
 if __name__ == "__main__":

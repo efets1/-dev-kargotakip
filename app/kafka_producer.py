@@ -28,7 +28,12 @@ def _get_producer():
 
 
 def publish_cargo_event(event_type, cargo):
-    event = {"event_type": event_type, "cargo": dict(cargo)}
+    event = {"event": event_type, "cargo_id": cargo["id"]}
+    if event_type == "cargo.created":
+        event["tracking_number"] = cargo["tracking_number"]
+    elif event_type == "cargo.status_changed":
+        event["status"] = cargo["status"].upper()
+
     try:
         _get_producer().send(TOPIC, event)
         return True

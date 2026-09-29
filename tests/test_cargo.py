@@ -1,7 +1,8 @@
 import pytest
 
 from app import create_app
-from app.routes import publish_cargo_event
+from app.kafka_producer import publish_cargo_event
+from consumer.consumer import format_event
 
 
 @pytest.fixture
@@ -27,8 +28,42 @@ def test_create_cargo_returns_pending_shipment(client):
     assert response.json["created_at"]
 
 
+def test_created_kafka_event_uses_specified_fields(client, monkeypatch):
+    class FakeProducer:
+        def send(self, topic, event):
+            self.topic = topic
+            self.event = event
+
+    producer = FakeProducer()
+    monkeypatch.setattr("app.kafka_producer._producer", producer)
+    with client.application.app_context():
+        publish_cargo_event(
+            "cargo.created",
+            {"id": 15, "tracking_number": "KRG-1001", "status": "pending"},
+        )
+
+    assert producer.topic == "cargo-events"
+    assert producer.event == {
+        "event": "cargo.created",
+        "cargo_id": 15,
+        "tracking_number": "KRG-1001",
+    }
+
+
+def test_consumer_formats_delivered_event(client):
+    assert format_event({"event": "cargo.delivered", "cargo_id": 15}) == "Cargo 15 delivered."
+
+
 def test_create_cargo_requires_all_fields(client):
     response = client.post("/cargo", json={"tracking_number": "TRK-001"})
+    assert response.status_code == 400
+
+
+def test_create_cargo_rejects_blank_tracking_number(client):
+    response = client.post(
+        "/cargo",
+        json={"tracking_number": "   ", "sender": "Aylin", "receiver": "Deniz"},
+    )
     assert response.status_code == 400
 
 
